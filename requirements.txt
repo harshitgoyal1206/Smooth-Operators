@@ -1,4 +1,8 @@
-tensorflow
+tensorflow>=2.12
 numpy
+pandas
+scikit-image
 opencv-python
+matplotlib
 gradio
+gdown
