@@ -82,12 +82,12 @@ def home():
 
 body{
 font-family:Arial;
-background:#eef2f7;
+background:linear-gradient(135deg,#e3f2fd,#f5f7fa);
 text-align:center;
 }
 
 .container{
-width:700px;
+width:750px;
 margin:auto;
 margin-top:80px;
 }
@@ -95,38 +95,82 @@ margin-top:80px;
 .card{
 background:white;
 padding:40px;
-border-radius:12px;
-box-shadow:0 8px 20px rgba(0,0,0,0.15);
-}
-
-h1{
-color:#2c3e50;
+border-radius:14px;
+box-shadow:0 10px 30px rgba(0,0,0,0.15);
 }
 
 .upload-box{
-border:2px dashed #3498db;
-padding:40px;
-margin-top:20px;
+border:2px dashed #1976d2;
+padding:30px;
 border-radius:10px;
-background:#f9fbff;
+background:#f8fbff;
+}
+
+.preview img{
+margin-top:20px;
+width:260px;
+border-radius:8px;
+box-shadow:0 6px 15px rgba(0,0,0,0.2);
 }
 
 button{
 margin-top:20px;
-padding:12px 25px;
-background:#3498db;
+padding:12px 30px;
+background:#1976d2;
 color:white;
 border:none;
-border-radius:6px;
+border-radius:8px;
 font-size:16px;
 cursor:pointer;
 }
 
 button:hover{
-background:#2980b9;
+background:#0d47a1;
+}
+
+#loading{
+display:none;
+margin-top:20px;
+}
+
+.spinner{
+border:6px solid #f3f3f3;
+border-top:6px solid #1976d2;
+border-radius:50%;
+width:40px;
+height:40px;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
 }
 
 </style>
+
+<script>
+
+function previewImage(event){
+
+var reader=new FileReader();
+
+reader.onload=function(){
+var img=document.getElementById("preview");
+img.src=reader.result;
+img.style.display="block";
+}
+
+reader.readAsDataURL(event.target.files[0]);
+
+}
+
+function showLoading(){
+document.getElementById("loading").style.display="block";
+}
+
+</script>
 
 </head>
 
@@ -138,15 +182,29 @@ background:#2980b9;
 
 <h1>AI Nuchal Translucency Analysis</h1>
 
-<p>Upload fetal ultrasound for automated Down Syndrome risk analysis</p>
+<p>Upload fetal ultrasound to estimate NT thickness and Down Syndrome risk</p>
 
-<form action="/predict" method="post" enctype="multipart/form-data">
+<form action="/predict" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
 
 <div class="upload-box">
-<input type="file" name="file" required>
+
+<input type="file" name="file" accept="image/*" onchange="previewImage(event)" required>
+
 </div>
 
-<button type="submit">Analyze Ultrasound</button>
+<div class="preview">
+<img id="preview" style="display:none">
+</div>
+
+<button type="submit">Run AI Analysis</button>
+
+<div id="loading">
+
+<div class="spinner"></div>
+
+<p>Processing image with AI model...</p>
+
+</div>
 
 </form>
 
@@ -194,12 +252,12 @@ def predict():
 
 body{
 font-family:Arial;
-background:#eef2f7;
+background:linear-gradient(135deg,#e3f2fd,#f5f7fa);
 text-align:center;
 }
 
 .container{
-width:1000px;
+width:1100px;
 margin:auto;
 margin-top:40px;
 }
@@ -207,8 +265,8 @@ margin-top:40px;
 .card{
 background:white;
 padding:30px;
-border-radius:12px;
-box-shadow:0 8px 20px rgba(0,0,0,0.15);
+border-radius:14px;
+box-shadow:0 10px 30px rgba(0,0,0,0.15);
 }
 
 .images{
@@ -219,34 +277,48 @@ margin-top:20px;
 }
 
 img{
-width:280px;
+width:300px;
 border-radius:10px;
-box-shadow:0 6px 15px rgba(0,0,0,0.2);
+box-shadow:0 6px 20px rgba(0,0,0,0.2);
 }
 
-.result{
-font-size:20px;
+.result-box{
+background:#f9fbff;
+padding:20px;
+border-radius:10px;
 margin-top:10px;
 }
 
+.metric{
+font-size:20px;
+margin:10px;
+}
+
 .risk{
-font-size:24px;
+font-size:28px;
 font-weight:bold;
 color:{{color}};
+}
+
+.info{
+margin-top:20px;
+font-size:15px;
+color:#555;
+line-height:1.6;
 }
 
 button{
 margin-top:20px;
 padding:10px 20px;
-background:#3498db;
+background:#1976d2;
 border:none;
 color:white;
-border-radius:6px;
+border-radius:8px;
 cursor:pointer;
 }
 
 button:hover{
-background:#2980b9;
+background:#0d47a1;
 }
 
 </style>
@@ -259,20 +331,30 @@ background:#2980b9;
 
 <div class="card">
 
-<h2>Analysis Result</h2>
+<h2>AI Ultrasound Analysis Result</h2>
 
-<div class="result">
-NT Thickness: <b>{{nt}} mm</b>
+<div class="result-box">
+
+<div class="metric">
+Nuchal Translucency Thickness: <b>{{nt}} mm</b>
 </div>
 
 <div class="risk">
-{{risk}}
+Risk Classification: {{risk}}
 </div>
+
+<div class="metric">
+Clinical Threshold: 3.5 mm
+</div>
+
+</div>
+
+<h3>Model Visualizations</h3>
 
 <div class="images">
 
 <div>
-<p>Original</p>
+<p>Original Ultrasound</p>
 <img src="data:image/png;base64,{{orig}}">
 </div>
 
@@ -288,7 +370,16 @@ NT Thickness: <b>{{nt}} mm</b>
 
 </div>
 
-<br>
+<div class="info">
+
+<b>Explanation:</b><br><br>
+
+• The deep learning model segments the Nuchal Translucency region.<br>
+• Thickness is computed from the vertical span of the segmented mask.<br>
+• NT > 3.5 mm is associated with increased Down Syndrome risk.<br>
+• This system assists screening and is not a medical diagnosis.
+
+</div>
 
 <a href="/"><button>Analyze Another Image</button></a>
 
