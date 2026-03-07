@@ -3,19 +3,15 @@ from flask import Flask, request
 import tensorflow as tf
 import cv2
 import numpy as np
-import os
 from huggingface_hub import hf_hub_download
 
 app = Flask(__name__)
 
-# Download model from Hugging Face if not present
-MODEL_PATH = "nt_model.keras"
-
-if not os.path.exists(MODEL_PATH):
-    MODEL_PATH = hf_hub_download(
-        repo_id="YOUR_USERNAME/YOUR_MODEL_REPO",
-        filename="nt_model.keras"
-    )
+# Download model from Hugging Face
+MODEL_PATH = hf_hub_download(
+    repo_id="harshitgoyal1206/nt_model",
+    filename="nt_model.keras"
+)
 
 # Load model
 model = tf.keras.models.load_model(MODEL_PATH, compile=False)
