@@ -1,4 +1,3 @@
-```python
 from flask import Flask, request
 import tensorflow as tf
 import cv2
@@ -82,4 +81,3 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
-```
