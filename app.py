@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -9,10 +9,7 @@ app = Flask(__name__)
 
 print("TensorFlow version:", tf.__version__)
 
-# -------------------------
 # Download model from HuggingFace
-# -------------------------
-
 MODEL_PATH = hf_hub_download(
     repo_id="harshitgoyal1206/nt_model",
     filename="nt_model.keras"
@@ -20,57 +17,45 @@ MODEL_PATH = hf_hub_download(
 
 print("Model downloaded at:", MODEL_PATH)
 
-# -------------------------
 # Load model
-# -------------------------
-
 model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 print("Model loaded successfully")
-
-# -------------------------
-# Preprocess image
-# -------------------------
 
 def preprocess_image(image_path):
 
     img = cv2.imread(image_path)
 
     if img is None:
-        raise ValueError("Invalid image")
+        return None
 
-    img = cv2.resize(img, (256, 256))
+    img = cv2.resize(img, (256,256))
     img = img / 255.0
     img = np.expand_dims(img, axis=0)
 
     return img
 
 
-# -------------------------
-# Predict NT thickness
-# -------------------------
-
 def predict_nt(image_path):
 
     img = preprocess_image(image_path)
 
-    prediction = model.predict(img)
+    if img is None:
+        return 0
 
-    mask = prediction[0, :, :, 0] > 0.35
+    pred = model.predict(img)
+
+    mask = pred[0,:,:,0] > 0.35
 
     coords = np.where(mask)
 
     if len(coords[0]) == 0:
         return 0
 
-    thickness_pixels = coords[0].max() - coords[0].min()
+    thickness = coords[0].max() - coords[0].min()
 
-    return thickness_pixels
+    return thickness
 
-
-# -------------------------
-# Risk classification
-# -------------------------
 
 def classify_risk(image_path):
 
@@ -87,18 +72,13 @@ def classify_risk(image_path):
     return nt_mm, risk
 
 
-# -------------------------
-# Routes
-# -------------------------
-
 @app.route("/")
 def home():
 
     return """
     <h2>Down Syndrome Detection</h2>
     <form action="/predict" method="post" enctype="multipart/form-data">
-        Upload Ultrasound Image:<br><br>
-        <input type="file" name="file"><br><br>
+        <input type="file" name="file">
         <input type="submit">
     </form>
     """
@@ -107,32 +87,19 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
 
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"})
-
     file = request.files["file"]
 
-    temp_path = "temp.png"
-    file.save(temp_path)
+    path = "temp.png"
+    file.save(path)
 
-    try:
+    nt_mm, risk = classify_risk(path)
 
-        nt_mm, risk = classify_risk(temp_path)
-
-        result = {
-            "NT_thickness_mm": round(float(nt_mm), 2),
-            "Risk": risk
-        }
-
-    except Exception as e:
-
-        result = {"error": str(e)}
-
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
-
-    return jsonify(result)
+    return f"""
+    NT thickness: {nt_mm:.2f} mm <br>
+    Risk: {risk}
+    """
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
