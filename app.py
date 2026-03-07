@@ -1,29 +1,30 @@
 from flask import Flask, request
 import tensorflow as tf
+from tensorflow import keras
 import cv2
 import numpy as np
 from huggingface_hub import hf_hub_download
 
 app = Flask(__name__)
 
-# Download model from Hugging Face
+# download model from huggingface
 MODEL_PATH = hf_hub_download(
     repo_id="harshitgoyal1206/nt_model",
     filename="nt_model.keras"
 )
 
-# Load model
-model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+# load model
+model = keras.models.load_model(MODEL_PATH, compile=False)
 
 
 def predict_nt(image_path):
 
     img = cv2.imread(image_path)
-    img = cv2.resize(img, (256, 256))
-    img = img / 255.0
-    img = np.expand_dims(img, 0)
+    img = cv2.resize(img, (256,256))
+    img = img/255.0
+    img = np.expand_dims(img,0)
 
-    pred = model.predict(img)[0, :, :, 0]
+    pred = model.predict(img)[0,:,:,0]
     mask = pred > 0.35
 
     coords = np.where(mask)
@@ -53,7 +54,6 @@ def classify_risk(image_path):
 
 @app.route("/")
 def home():
-
     return """
     <h2>Down Syndrome Detection</h2>
     <form action="/predict" method="post" enctype="multipart/form-data">
