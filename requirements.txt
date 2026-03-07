@@ -1,8 +1,5 @@
-tensorflow>=2.12
-numpy
-pandas
-scikit-image
+flask
+tensorflow
 opencv-python
-matplotlib
-gradio
-gdown
+numpy
+gunicorn
