@@ -7,8 +7,10 @@ from huggingface_hub import hf_hub_download
 
 app = Flask(__name__)
 
+print("TensorFlow version:", tf.__version__)
+
 # -------------------------
-# Download model from HF
+# Download model from HuggingFace
 # -------------------------
 
 MODEL_PATH = hf_hub_download(
@@ -16,17 +18,18 @@ MODEL_PATH = hf_hub_download(
     filename="nt_model.keras"
 )
 
+print("Model downloaded at:", MODEL_PATH)
+
 # -------------------------
-# Load model once
+# Load model
 # -------------------------
 
 model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 print("Model loaded successfully")
 
-
 # -------------------------
-# Image preprocessing
+# Preprocess image
 # -------------------------
 
 def preprocess_image(image_path):
@@ -38,14 +41,13 @@ def preprocess_image(image_path):
 
     img = cv2.resize(img, (256, 256))
     img = img / 255.0
-
     img = np.expand_dims(img, axis=0)
 
     return img
 
 
 # -------------------------
-# NT prediction
+# Predict NT thickness
 # -------------------------
 
 def predict_nt(image_path):
@@ -93,7 +95,7 @@ def classify_risk(image_path):
 def home():
 
     return """
-    <h2>Down Syndrome Detection (NT Measurement)</h2>
+    <h2>Down Syndrome Detection</h2>
     <form action="/predict" method="post" enctype="multipart/form-data">
         Upload Ultrasound Image:<br><br>
         <input type="file" name="file"><br><br>
@@ -110,10 +112,7 @@ def predict():
 
     file = request.files["file"]
 
-    if file.filename == "":
-        return jsonify({"error": "Empty filename"})
-
-    temp_path = "temp_image.png"
+    temp_path = "temp.png"
     file.save(temp_path)
 
     try:
@@ -121,8 +120,8 @@ def predict():
         nt_mm, risk = classify_risk(temp_path)
 
         result = {
-            "nt_thickness_mm": round(float(nt_mm), 2),
-            "risk": risk
+            "NT_thickness_mm": round(float(nt_mm), 2),
+            "Risk": risk
         }
 
     except Exception as e:
@@ -134,10 +133,6 @@ def predict():
 
     return jsonify(result)
 
-
-# -------------------------
-# Run server
-# -------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
