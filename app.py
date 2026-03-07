@@ -1,50 +1,74 @@
-import gradio as gr
+from flask import Flask, request
+import tensorflow as tf
 import cv2
 import numpy as np
-import tensorflow as tf
 
-# Custom functions
-def dice_coef(y_true, y_pred):
-    y_true = tf.reshape(y_true, [-1])
-    y_pred = tf.reshape(y_pred, [-1])
-    intersection = tf.reduce_sum(y_true * y_pred)
-    return (2.*intersection + 1)/(tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + 1)
+app = Flask(__name__)
 
-def dice_loss(y_true, y_pred):
-    return 1 - dice_coef(y_true, y_pred)
+model = tf.keras.models.load_model("nt_model.keras", compile=False)
 
-bce = tf.keras.losses.BinaryCrossentropy()
+def predict_nt(image_path):
 
-def combined_loss(y_true, y_pred):
-    return bce(y_true, y_pred) + dice_loss(y_true, y_pred)
-
-# Load your trained model
-model = tf.keras.models.load_model(
-    "nt_model.keras",
-    custom_objects={"combined_loss": combined_loss, "dice_coef": dice_coef}
-)
-
-# Prediction function
-def predict(image):
-    img = cv2.resize(image,(256,256))
+    img = cv2.imread(image_path)
+    img = cv2.resize(img,(256,256))
     img = img/255.0
     img = np.expand_dims(img,0)
+
     pred = model.predict(img)[0,:,:,0]
     mask = pred > 0.35
+
     coords = np.where(mask)
-    if len(coords[0])==0:
-        nt_pixels = 0
+
+    if len(coords[0]) == 0:
+        return 0
+
+    thickness = coords[0].max() - coords[0].min()
+
+    return thickness
+
+
+def classify_risk(image_path):
+
+    nt_pixels = predict_nt(image_path)
+
+    pixel_to_mm = 0.1
+    nt_mm = nt_pixels * pixel_to_mm
+
+    if nt_mm < 3.5:
+        risk = "LOW RISK"
     else:
-        nt_pixels = coords[0].max() - coords[0].min()
-    nt_mm = nt_pixels * 0.1
-    risk = "LOW RISK" if nt_mm < 3.5 else "HIGH RISK"
-    return f"NT Thickness: {nt_mm:.2f} mm | Risk: {risk}"
+        risk = "HIGH RISK"
 
-demo = gr.Interface(
-    fn=predict,
-    inputs=gr.Image(type="numpy"),
-    outputs="text",
-    title="Fetal NT Thickness Detection"
-)
+    return nt_mm, risk
 
-demo.launch()
+
+@app.route("/")
+def home():
+
+    return """
+    <h2>Down Syndrome Detection</h2>
+    <form action="/predict" method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit">
+    </form>
+    """
+
+
+@app.route("/predict", methods=["POST"])
+def predict():
+
+    file = request.files["file"]
+
+    path = "temp.png"
+    file.save(path)
+
+    nt_mm, risk = classify_risk(path)
+
+    return f"""
+    NT thickness: {nt_mm:.2f} mm <br>
+    Risk: {risk}
+    """
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
