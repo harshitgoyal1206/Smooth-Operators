@@ -1,15 +1,16 @@
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 from flask import Flask, request
 import tensorflow as tf
 import numpy as np
 import cv2
-import os
 from huggingface_hub import hf_hub_download
 
 app = Flask(__name__)
 
 print("TensorFlow version:", tf.__version__)
 
-# Download model from HuggingFace
 MODEL_PATH = hf_hub_download(
     repo_id="harshitgoyal1206/nt_model",
     filename="nt_model.keras"
@@ -17,14 +18,13 @@ MODEL_PATH = hf_hub_download(
 
 print("Model downloaded at:", MODEL_PATH)
 
-# Load model
 model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 print("Model loaded successfully")
 
-def preprocess_image(image_path):
 
-    img = cv2.imread(image_path)
+def preprocess_image(path):
+    img = cv2.imread(path)
 
     if img is None:
         return None
@@ -46,7 +46,6 @@ def predict_nt(image_path):
     pred = model.predict(img)
 
     mask = pred[0,:,:,0] > 0.35
-
     coords = np.where(mask)
 
     if len(coords[0]) == 0:
@@ -57,9 +56,9 @@ def predict_nt(image_path):
     return thickness
 
 
-def classify_risk(image_path):
+def classify_risk(path):
 
-    nt_pixels = predict_nt(image_path)
+    nt_pixels = predict_nt(path)
 
     pixel_to_mm = 0.1
     nt_mm = nt_pixels * pixel_to_mm
@@ -74,7 +73,6 @@ def classify_risk(image_path):
 
 @app.route("/")
 def home():
-
     return """
     <h2>Down Syndrome Detection</h2>
     <form action="/predict" method="post" enctype="multipart/form-data">
