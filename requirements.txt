@@ -1,5 +1,6 @@
 flask
 tensorflow==2.16.2
+tf-keras
 opencv-python-headless
 numpy
 gunicorn
