@@ -1,20 +1,34 @@
+```python
 from flask import Flask, request
 import tensorflow as tf
 import cv2
 import numpy as np
+import os
+from huggingface_hub import hf_hub_download
 
 app = Flask(__name__)
 
-model = tf.keras.models.load_model("nt_model.keras", compile=False)
+# Download model from Hugging Face if not present
+MODEL_PATH = "nt_model.keras"
+
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = hf_hub_download(
+        repo_id="YOUR_USERNAME/YOUR_MODEL_REPO",
+        filename="nt_model.keras"
+    )
+
+# Load model
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
 
 def predict_nt(image_path):
 
     img = cv2.imread(image_path)
-    img = cv2.resize(img,(256,256))
-    img = img/255.0
-    img = np.expand_dims(img,0)
+    img = cv2.resize(img, (256, 256))
+    img = img / 255.0
+    img = np.expand_dims(img, 0)
 
-    pred = model.predict(img)[0,:,:,0]
+    pred = model.predict(img)[0, :, :, 0]
     mask = pred > 0.35
 
     coords = np.where(mask)
@@ -72,3 +86,4 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
+```
